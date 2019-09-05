@@ -25,6 +25,7 @@ years = [2019, 2020, 2021, 2022, 2023, 2024]
 def Main():
     root = tk.Tk()
     root.title("My Daily Q")
+    root.geometry('+600+300')
     root.resizable(width=False, height=False)
     global app
     app = MainWindow(root)
@@ -50,7 +51,6 @@ class MainWindow:
         self.description_frame = tk.Frame(self.root)
         self.description_frame.grid(padx=10, pady=10, row=1, column=0, sticky='w')
 
-        self.view_window = ViewReminderWindow(self.description_frame)
 
         # ---- ListBox ----
 
@@ -75,6 +75,10 @@ class MainWindow:
 
         self.b_Quit = tk.Button(self.button_frame, text="Quit", width=10, command=self.save_and_exit)
         self.b_Quit.grid(row=2, column=0)
+
+        # ---- Text Display ---
+
+        self.display_window = DataReadout(self.description_frame)
     
     def refresh_list(self):
         self.lb_assignments.delete(0, tk.END)
@@ -99,12 +103,13 @@ class MainWindow:
             self.lb_assignments.insert(tk.END, formatted_string)
 
     def format_string(self, title, time):
-        if len(title) <= 40:
-            for i in range(40 - len(title)):
-                title += " "
-            title += ': ({})'.format(time)
-        elif len(title) > 40:
-            title = title[0:35] + '...  : ({})'.format(time)
+        # if len(title) <= 40:
+        #     while len(title) <= 40:
+        #         title += ' '
+        #     title += ': ({})'.format(time)
+        # elif len(title) > 40:
+        #     title = title[0:35] + '....  : ({})'.format(time)
+        title = "{} : ({})".format(title, time)
         return title
     
     def save_and_exit(self):
@@ -126,60 +131,61 @@ class MainWindow:
         self.update_description(selected_obj)
     
     def update_description(self, obj):
-        self.view_window.update_text(obj)
+        self.display_window.update_textbox(obj)
 
     def view_history(self):
         pass
 
 
-class ViewReminderWindow:
+
+class DataReadout:
     def __init__(self, master):
         self.root = master
-        self.root.config(width=80)
+        self.font = 'Helvetica'
+        self.font_size = 15
+        self.display_font = self.font, self.font_size
+
+        self.button_state = False
+
         self.selected_item = None
-        self.spawn = False
-        self.b_completed = tk.Button(self.root, text="Completed", width=15, command=self.complete_item)
-        self.b_delete = tk.Button(self.root, text="Delete", width=15, command=self.delete_item)
 
-        self.l_label = tk.Label(self.root, text='Label: ', justify=tk.LEFT)
-        self.l_dueDate = tk.Label(self.root, text='Due Date: ', justify=tk.LEFT)
-        self.l_description = tk.Label(self.root, text='Description: ', justify=tk.LEFT)
-        self.l_dateCreated = tk.Label(self.root, text='Date Created: ', justify=tk.LEFT)
+        self.display = tk.Text(self.root, wrap=tk.WORD, state=tk.DISABLED, bg="#F3F3F3", font=self.display_font, width=35, height=10)
+        self.display.grid(row=0, columnspan=2)
 
-        self.l_label_display = tk.Label(self.root, justify=tk.LEFT)
-        self.l_dueDate_display = tk.Label(self.root, justify=tk.LEFT)
-        self.l_description_display = tk.Label(self.root, justify=tk.LEFT, wraplength=160)
-        self.l_dateCreated_display = tk.Label(self.root, justify=tk.LEFT)
+        self.b_complete = tk.Button(self.root, text="Complete", width=15, command=self.complete_item, state=tk.DISABLED)
+        self.b_complete.grid(row=1, column=0)
 
-    def update_text(self, obj):
-        self.add_widgets()
+        self.b_delete = tk.Button(self.root, text="Delete", width=15, command=self.delete_item, state=tk.DISABLED)
+        self.b_delete.grid(row=1, column=1)
+    
+    def insert_text(self, input_string):
+        self.display.config(state=tk.NORMAL)
+        self.display.delete(1.0, tk.END)
+        self.display.insert(tk.END, input_string)
+        self.display.config(state=tk.DISABLED)
+
+    def set_font(self, font_style, font_size):
+        self.font = font_style
+        self.font_size = font_size
+        self.display.config(font=self.display_font)
+
+    def format_description(self, obj):
         self.selected_item = obj
-        self.l_label_display.config(text=obj.title)
-        self.l_description_display.config(text=obj.description)
-        self.l_dueDate_display.config(text=obj.due_date.date())
-        self.l_dateCreated_display.config(text=obj.date_created.date())
-        
-
-    def add_widgets(self):
-        if self.spawn == False:
-            self.l_label.grid(row=0, column=0, sticky='nw')
-            self.l_description.grid(row=1, column=0, sticky='nw')
-            self.l_dueDate.grid(row=2, column=0, sticky='nw')
-            self.l_dateCreated.grid(row=3, column=0, sticky='nw')
-
-            self.l_label_display.grid(row=0, column=1, sticky='nw')
-            self.l_description_display.grid(row=1, column=1, sticky='nw')
-            self.l_dueDate_display.grid(row=2, column=1, sticky='nw')
-            self.l_dateCreated_display.grid(row=3, column=1, sticky='nw')
-
-            self.b_completed.grid(row=4, column=0)
-            self.b_delete.grid(row=4, column=1)
-            self.spawn = True
-        else:
-            pass
+        title = obj.title
+        description = obj.description
+        dueDate = obj.due_date.date()
+        dateCreated = obj.date_created.date()
+        output = "{}\n\n{}\n\nDue Date : {}\nDate Created : {}".format(title, description, dueDate, dateCreated)
+        return output
+    
+    def update_textbox(self, obj):
+        self.change_button_state()
+        formatted_string = self.format_description(obj)
+        self.insert_text(formatted_string)
 
     def delete_item(self):
         app.pending_assignments.remove(self.selected_item)
+        self.clear_window()
         app.refresh_list()
 
     def complete_item(self):
@@ -187,10 +193,29 @@ class ViewReminderWindow:
         app.pending_assignments.remove(self.selected_item)
         app.refresh_list()
 
+    def change_button_state(self):
+        if self.button_state == False:
+            self.b_complete.config(state=tk.NORMAL)
+            self.b_delete.config(state=tk.NORMAL)
+            self.button_state = True
+        else:
+            pass
+
+    def clear_window(self):
+        self.display.config(state=tk.NORMAL)
+        self.display.delete(1.0, tk.END)
+        self.display.insert(tk.END, "Item Deleted...")
+        self.display.config(state=tk.DISABLED)
+
+
+
 class AddReminderWindow:
     def __init__(self):
         app.b_Add.config(state=tk.DISABLED)
         self.add_window = tk.Tk()
+        self.add_window.geometry('+600+300')
+        self.add_window.resizable(width=False, height=False)
+
         self.add_window.title("My Daily Q")
 
         self.add_frame = tk.Frame(self.add_window)
@@ -256,7 +281,7 @@ class AddReminderWindow:
     def save_new_assignment(self):
         des = self.retrieve_text()
         title = self.e_title.get()
-        obj = Assignment(title, des)
+        obj = Assignment(title.strip(), des.strip())
         input_day = int(self.selected_day.get())
         input_month = int(months[self.selected_month.get()])
         input_year = int(self.selected_year.get())
@@ -271,3 +296,8 @@ if __name__ == "__main__":
 
 
 
+
+
+
+
+    

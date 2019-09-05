@@ -25,5 +25,5 @@ def save(name, data):
 
 
 def get_full_pathname(name):
-    filename = os.path.abspath(os.path.join('.','Saved Data/' + name + '.pkl'))
+    filename = os.path.abspath(os.path.join('.',name + '.pkl'))
     return filename
